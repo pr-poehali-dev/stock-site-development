@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useStore } from '@/lib/store';
 import Icon from '@/components/ui/icon';
 import { toast } from 'sonner';
+import { api } from '@/lib/api';
 
 interface AuthDialogProps {
   open: boolean;
@@ -23,24 +24,27 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
     
     const formData = new FormData(e.currentTarget);
     const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
 
-    setTimeout(() => {
-      const isAdmin = email === 'admin@zidesign.com';
+    try {
+      const user = await api.auth.login(email);
       
       setUser({
-        id: '1',
-        name: isAdmin ? 'Администратор' : email.split('@')[0],
-        email,
-        role: isAdmin ? 'admin' : 'user',
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-        createdAt: new Date().toISOString(),
+        id: user.id.toString(),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar,
+        bio: user.bio,
+        createdAt: user.created_at,
       });
       
       toast.success('Вы успешно вошли!');
-      setIsLoading(false);
       onOpenChange(false);
-    }, 1000);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Ошибка входа');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -50,22 +54,27 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
     const formData = new FormData(e.currentTarget);
     const name = formData.get('name') as string;
     const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
 
-    setTimeout(() => {
+    try {
+      const user = await api.auth.register(email, name);
+      
       setUser({
-        id: Date.now().toString(),
-        name,
-        email,
-        role: 'user',
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-        createdAt: new Date().toISOString(),
+        id: user.id.toString(),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar,
+        bio: user.bio,
+        createdAt: user.created_at,
       });
       
       toast.success('Регистрация успешна!');
-      setIsLoading(false);
       onOpenChange(false);
-    }, 1000);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Ошибка регистрации');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

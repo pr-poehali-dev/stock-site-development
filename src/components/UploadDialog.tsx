@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { useStore, DesignWork } from '@/lib/store';
 import Icon from '@/components/ui/icon';
 import { toast } from 'sonner';
+import { api } from '@/lib/api';
 
 interface UploadDialogProps {
   open: boolean;
@@ -52,37 +53,50 @@ export const UploadDialog = ({ open, onOpenChange }: UploadDialogProps) => {
     setIsLoading(true);
     const formData = new FormData(e.currentTarget);
 
-    const newWork: DesignWork = {
-      id: Date.now().toString(),
-      title: formData.get('title') as string,
-      description: formData.get('description') as string,
-      category: formData.get('category') as any,
-      image: previewImage || `https://images.unsplash.com/photo-${Math.random().toString(36).substr(2, 9)}?w=400`,
-      files: [],
-      license: formData.get('license') as any,
-      tags,
-      authorId: user.id,
-      authorName: user.name,
-      authorAvatar: user.avatar,
-      likes: 0,
-      downloads: 0,
-      createdAt: new Date().toISOString(),
-      status: user.role === 'admin' ? 'approved' : 'pending',
-    };
+    try {
+      const work = await api.works.create({
+        title: formData.get('title') as string,
+        description: formData.get('description') as string,
+        category: formData.get('category') as string,
+        license: formData.get('license') as string,
+        tags,
+        author_id: parseInt(user.id),
+        author_role: user.role,
+        image_base64: previewImage,
+      });
 
-    setTimeout(() => {
+      const newWork: DesignWork = {
+        id: work.id.toString(),
+        title: work.title,
+        description: work.description,
+        category: work.category as any,
+        image: work.image_url,
+        files: work.file_urls,
+        license: work.license as any,
+        tags: work.tags,
+        authorId: user.id,
+        authorName: user.name,
+        authorAvatar: user.avatar,
+        likes: work.likes,
+        downloads: work.downloads,
+        createdAt: work.created_at,
+        status: work.status as any,
+      };
+
       addWork(newWork);
       toast.success(
         user.role === 'admin' 
           ? 'Работа опубликована!' 
           : 'Работа отправлена на модерацию!'
       );
-      setIsLoading(false);
       onOpenChange(false);
-      
       setTags([]);
       setPreviewImage('');
-    }, 1000);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Ошибка загрузки');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
